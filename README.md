@@ -2,6 +2,22 @@
 
 **A trust score doesn't make a decision. Your wrapper does.**
 
+## False Promises — Find the Exception
+
+**Before AI sends a promise, we look for a customer who makes it false.** This build implements the customer-support gate with independent company-rule checks, policy-backed discount counterexamples, Ezio dimension/claim handling, and persistent review records.
+
+Run the complete offline workspace:
+
+```bash
+python3 gate.py serve --persona customer_support
+```
+
+The signature demo compares the same loyalty offer for hypothetical Pro customers at 11 and 12 months. A personalized offer tests its actual customer; a broader offer searches its stated population. Only approved decisions execute the mock email.
+
+**Language:** Python 3.9+. **Exact wrapper start command:** `python3 wrapper/serve.py`. The supplied harness starts the mock and sets the wrapper environment; no dependencies, live keys, or custom `GATE_WRAPPER_CMD` are needed.
+
+See [the implemented decision policy](docs/decision-policy.md), [submission and demo notes](docs/submission-notes.md), and [wrapper interfaces](wrapper/README.md). The original challenge documentation follows.
+
 An **Ezio AI** participant starter for the Decision-Grade AI Buildathon. Build a decision wrapper around a **local simulated Ezio API**, not another scoring engine and not the live Ezio product.
 
 > **This repository is fully self-contained.** Everything runs on your own laptop. You never expose your code to the network, and judges never set anything up: the final judging set is delivered to you in the last 30 minutes, and one command runs it against your wrapper. No live Ezio key, paid credits, or external dependencies are required. Python 3.9 or newer, standard library only.
@@ -224,4 +240,9 @@ python3 test_mock.py
 python3 -m unittest test_contract test_harness
 ```
 
-The starter intentionally leaves `check_source_of_truth()` empty and policy justifications as TODOs. Passing these infrastructure tests is not a completed challenge solution.
+The original starter left independent checks and policy justifications unfinished. This implementation supplies them in `wrapper/source_checks.py` and `wrapper/policy.json`. Verify business behavior as well as infrastructure:
+
+```bash
+python3 -m unittest test_contract test_harness test_source_checks test_decisions test_reviews
+python3 gate.py practice --persona customer_support --team "False Promises" --no-show
+```

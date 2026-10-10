@@ -108,6 +108,18 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(len(self.request("/api/audit")[1]["entries"][0]["reviews"]), 8)
         self.action.assert_not_called()
 
+    def test_nonfinite_context_rejected_before_decision_or_action(self):
+        prefix = b'{"text":"You qualify for a loyalty discount.","persona":"customer_support","context":{"plan":"Pro","customer_tenure_months":'
+        with patch.object(serve, "decide") as decide:
+            for value in (b'NaN', b'Infinity', b'1e999'):
+                request = urllib.request.Request(self.base + "/decide", data=prefix + value + b'}}',
+                                                 headers={"Content-Type": "application/json"})
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    urllib.request.urlopen(request, timeout=5)
+                self.assertEqual(caught.exception.code, 400)
+            decide.assert_not_called()
+        self.action.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

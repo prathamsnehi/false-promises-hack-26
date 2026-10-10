@@ -1,5 +1,20 @@
 # Approval Gate — Wrapper Starter
 
+## False Promises: Find the Exception
+
+This customer-support implementation checks prices and policies, uses Ezio's individual signals, and searches for customers who invalidate discount promises. A personalized offer uses the actual customer; a broader claim searches its stated population and policy boundary states. A concrete witness explains a BLOCK. No counterexample found applies only to modeled discount checks.
+
+**Complete offline UI/demo:** `python3 gate.py serve --persona customer_support`.
+**Exact wrapper start command:** `python3 wrapper/serve.py` (the harness supplies `EZIO_URL`, `HOST`, `PORT`, and `GATE_LOG_DIR`). No packages or external services are required.
+
+The UI's 11/12-month comparison runs two ordinary decisions for hypothetical Pro customers. Approved requests execute the local mock email; blocked/held requests do not. Reviews log rejection or a revision request without authorizing sending. Revised drafts must be checked again.
+
+`POST /decide` keeps the original fields and adds `decision_id`, `checks`, and `counterexamples`. `GET /api/audit` returns `{entries: [...]}` for the latest 30 decisions with associated reviews. `POST /api/reviews` accepts `{decision_id, disposition, note}` for an existing held decision, where disposition is `reject` or `request_revision` and note is 1–1000 characters. Audit and review logs live in `GATE_LOG_DIR`.
+
+Run `python3 -m unittest test_contract test_harness test_source_checks test_decisions test_reviews` and `python3 gate.py practice --persona customer_support --team "False Promises" --no-show`. See `docs/decision-policy.md` and `docs/submission-notes.md` for the implemented policy, demo and final-run checklist. Other personas are held because this build implements customer-support independent checks only.
+
+The remainder below documents the supplied starter interfaces.
+
 Python 3.9+, standard library only. The runnable baseline mostly follows the overall tier; it is deliberately weak. **Your task is the independent signal and decision policy, not the HTTP plumbing.**
 
 ## Run from the repository root

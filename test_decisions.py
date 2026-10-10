@@ -1,6 +1,4 @@
 """Regression tests for decisions, upstream evidence, and outage precedence."""
-import copy
-import json
 import sys
 import unittest
 from pathlib import Path

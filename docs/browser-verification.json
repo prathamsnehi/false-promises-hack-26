@@ -1,0 +1,15 @@
+{
+  "boundary": "BLOCK at 11 / APPROVE at 12",
+  "composerContextPreserved": true,
+  "sampleContextLoaded": true,
+  "reviewPersisted": true,
+  "revisionRechecked": true,
+  "emptyInputNoRequest": true,
+  "mobileNoOverflow": true,
+  "loadingControlsDisabled": true,
+  "interruptedRequestVisible": true,
+  "browserErrors": [],
+  "expectedInterruptedRequestErrors": [
+    "Failed to load resource: net::ERR_FAILED"
+  ]
+}

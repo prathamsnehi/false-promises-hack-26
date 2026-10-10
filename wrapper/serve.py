@@ -8,6 +8,7 @@ from pathlib import Path
 import mock_actions
 import audit
 from wrapper import APPROVE, decide
+from ezio_client import finite_number
 
 UI_DIR = Path(__file__).parent / "ui"
 PERSONAS_DIR = Path(__file__).resolve().parent.parent / "personas"
@@ -79,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length") or 0)
             if not 0 < length <= 1_000_000:
                 raise ValueError("Body must be 1 to 1000000 bytes")
-            payload = json.loads(self.rfile.read(length))
+            payload = json.loads(self.rfile.read(length), parse_float=finite_number, parse_constant=finite_number)
             if not isinstance(payload, dict):
                 raise ValueError("Body must be a JSON object")
             if self.path == "/api/reviews":

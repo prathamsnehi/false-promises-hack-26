@@ -1,5 +1,7 @@
 # Four-Person, One-Hour Build Plan
 
+> Historical starter assessment and four-person proposal. The implemented **False Promises** project now has a two-person handoff in `docs/submission-notes.md`, its actual policy in `docs/decision-policy.md`, and completed checks in `docs/verification.md`. The baseline and TODO descriptions below describe the original starter.
+
 Use the existing Python starter and build one complete persona workflow. This plan assumes **customer support** unless the team has already chosen another persona. Its price table and explicit policies make it a practical scope for one hour; paralegal holding interpretation and financial metric/period parsing require more semantic work.
 
 ## Codebase Review

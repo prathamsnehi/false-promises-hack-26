@@ -1,13 +1,13 @@
 """Meaningful source-check regressions, with new wording and boundary scopes."""
 import csv
 import json
+import sys
 import unittest
 from pathlib import Path
 
-from wrapper.source_checks import check
-
-
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "wrapper"))
+from source_checks import check
 
 
 class SourceCheckTests(unittest.TestCase):
@@ -46,6 +46,8 @@ class SourceCheckTests(unittest.TestCase):
         self.assertTrue(any(c["status"] == "MATCH" for c in result["checks"]))
         self.assertTrue(any(c["status"] == "CONTRADICTION" for c in result["checks"]))
         self.assertEqual(self.decision("Business is $99/mo, with an initial reply within two hundred forty minutes."), "APPROVE")
+        self.assertEqual(self.decision("Business includes a fourteen-day trial and a first response within four hours."), "APPROVE")
+        self.assertEqual(self.decision("Business has a first response within four hours and a fourteen-day trial."), "APPROVE")
 
     def test_personalized_eligibility_uses_only_actual_customer(self):
         draft = "You qualify for the fifteen percent loyalty discount."
@@ -53,6 +55,8 @@ class SourceCheckTests(unittest.TestCase):
         self.assertEqual(self.decision(draft, {"plan": "Pro", "customer_tenure_months": 11}), "BLOCK")
         self.assertEqual(self.decision(draft, {"plan": "Starter", "customer_tenure_months": 99}), "BLOCK")
         self.assertEqual(self.decision(draft, {"plan": "Pro"}), "HOLD_FOR_REVIEW")
+        for tenure in (True, -1, "twelve", float("inf")):
+            self.assertEqual(self.decision(draft, {"plan": "Pro", "customer_tenure_months": tenure}), "HOLD_FOR_REVIEW")
         # An eligible individual cannot rescue an overbroad promise.
         broad = self.check("All Pro customers receive a 15% loyalty discount.", {"plan": "Pro", "customer_tenure_months": 50})
         self.assertEqual(broad["counterexamples"][0]["customer"], {"plan": "Pro", "customer_tenure_months": 11})
@@ -75,12 +79,33 @@ class SourceCheckTests(unittest.TestCase):
         self.assertEqual(self.decision("All Starter customers with at least twelve months get a 15% loyalty discount."), "BLOCK")
         self.assertEqual(self.decision("Eligible customers receive our 15% loyalty discount."), "APPROVE")
         self.assertEqual(self.decision("The loyalty discount is fifteen percent."), "APPROVE")
+        self.assertEqual(self.decision("All Pro customers with at least a twelve-month tenure get 15% loyalty discount."), "APPROVE")
 
     def test_discount_rate_and_stacking_negation(self):
         self.assertEqual(self.decision("Your loyalty discount is sixteen percent.", {"plan": "Pro", "customer_tenure_months": 12}), "BLOCK")
         self.assertEqual(self.decision("You cannot combine loyalty and annual discounts."), "APPROVE")
         self.assertEqual(self.decision("You can combine loyalty and annual discounts.", {"plan": "Pro", "customer_tenure_months": 12}), "BLOCK")
         self.assertEqual(self.decision("Annual billing saves twenty percent on every self-serve plan."), "APPROVE")
+        combined = self.check("You can combine loyalty and annual discounts.", {"plan": "Pro", "customer_tenure_months": 12})
+        self.assertTrue(any(p["policy_field"] == "discounts.stacking_allowed" and p["outcome"] == "counterexample_found" for p in combined["counterexamples"]))
+        self.assertEqual(self.decision("Loyalty and annual discounts cannot be combined."), "APPROVE")
+
+    def test_ambiguous_discount_is_reviewed_and_enterprise_is_known(self):
+        self.assertEqual(self.decision("You get a discount.", {"plan": "Pro", "customer_tenure_months": 12}), "HOLD_FOR_REVIEW")
+        self.assertEqual(self.decision("Your loyalty discount is 15%.", {"plan": "Enterprise", "customer_tenure_months": 20}), "BLOCK")
+        self.assertEqual(self.decision("Your loyalty discount is 15%.", {"plan": "Enterprise"}), "BLOCK")
+        self.assertEqual(self.decision("As one of our customers, you receive a 15% loyalty discount.", {"plan": "Pro", "customer_tenure_months": 20}), "APPROVE")
+
+    def test_billing_period_belongs_to_each_price(self):
+        self.assertEqual(self.decision("Pro is $49 monthly or $39.20/month billed annually."), "APPROVE")
+        self.assertEqual(self.decision("Pro is $49 monthly or $39.00/month billed annually."), "BLOCK")
+        self.assertEqual(self.decision("Starter costs fifteen dollars and twenty cents per month billed annually."), "APPROVE")
+
+    def test_universal_annual_discounts_include_enterprise_unless_scoped(self):
+        self.assertEqual(self.decision("Every customer receives a 20% annual billing discount."), "BLOCK")
+        self.assertEqual(self.decision("Every self-serve customer receives a 20% annual billing discount."), "APPROVE")
+        self.assertEqual(self.decision("Enterprise customers receive a 20% annual billing discount."), "BLOCK")
+        self.assertEqual(self.decision("Your loyalty discount is thirty per cent.", {"plan": "Pro", "customer_tenure_months": 20}), "BLOCK")
 
     def test_refund_period_scope_and_exceptions(self):
         self.assertEqual(self.decision("A refund is available within two weeks of the first annual payment."), "APPROVE")
@@ -94,6 +119,9 @@ class SourceCheckTests(unittest.TestCase):
         self.assertEqual(self.decision("Starter comes with a free trial lasting fourteen days."), "BLOCK")
         self.assertEqual(self.decision("Starter has no free trial."), "APPROVE")
         self.assertEqual(self.decision("The Pro free trial requires a credit card."), "BLOCK")
+        self.assertEqual(self.decision("Starter includes a free trial."), "BLOCK")
+        self.assertEqual(self.decision("Pro includes a free trial."), "APPROVE")
+        self.assertEqual(self.decision("Pro offers a fourteen-day trial; a credit card is required."), "BLOCK")
 
     def test_public_knowledge_is_left_for_ezio(self):
         self.assertEqual(self.decision("We received your GDPR deletion request."), "APPROVE")
