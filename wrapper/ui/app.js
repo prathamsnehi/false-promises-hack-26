@@ -46,11 +46,14 @@ const contextLabel = context => (context?.plan || "Unknown plan") + " · " +
 
 async function request(path, options) {
   let response;
+  const isWrite=options?.method && options.method!=="GET";
   try { response = await fetch(path, options); }
-  catch { throw new Error("Connection interrupted. The outcome is unknown; inspect the audit trail before sending again."); }
+  catch { throw new Error(isWrite?
+    "Connection interrupted. The outcome is unknown; inspect the audit trail before trying again.":
+    "Could not reach the server. Check that the local demo is running and try again."); }
   let body;
   try { body = await response.json(); }
-  catch { throw new Error("The server returned an unreadable response. Inspect the audit trail before retrying."); }
+  catch { throw new Error("The server returned an unreadable response."+(isWrite?" Inspect the audit trail before retrying.":" Try loading this information again.")); }
   if (!response.ok) throw new Error(body.error || ("Request failed (" + response.status + ")."));
   return body;
 }
@@ -62,8 +65,14 @@ async function decide(text, context) {
   });
 }
 function showError(message) {
-  $("request-error").textContent = message;
-  $("request-error").hidden = false;
+  const error=$("request-error");
+  error.textContent=message;error.hidden=false;
+  error.setAttribute("tabindex","-1");
+  const bounds=error.getBoundingClientRect();
+  if(bounds.top<0||bounds.bottom>window.innerHeight) {
+    error.focus({preventScroll:true});
+    error.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"center"});
+  }
 }
 function clearError() { $("request-error").hidden = true; $("request-error").textContent = ""; }
 function toast(message) {
@@ -169,14 +178,23 @@ function signalsMarkup(result) {
     '</strong><div class="mini">Accuracy: '+esc(status)+'<br>Gate decides independently.</div></div>'+
     metric("tone")+metric("bias")+metric("agreement")+'</div>';
 }
-function revealResult() {
+function revealResult(force=false) {
   const panel=$("decision-panel");
   panel.setAttribute("tabindex","-1");
-  // Keep the side-by-side desktop workspace stable; bring mobile results into view.
-  if(window.matchMedia("(max-width: 900px)").matches) {
+  const bounds=panel.getBoundingClientRect();
+  const resultOutOfView=bounds.top>window.innerHeight-300||bounds.bottom<0;
+  // Keep visible desktop results stable; reveal results when too little is in view.
+  if(force||resultOutOfView||window.matchMedia("(max-width: 900px)").matches) {
     panel.focus({preventScroll:true});
     panel.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"});
   }
+}
+function signalSummaryMarkup(result) {
+  const ezio=result.ezio||{}, accuracy=ezio.dimensions?.accuracy?.status;
+  const tier=ezio.verdict?.tier || (ezio.error?"Unavailable":"Not supplied");
+  return '<div class="signal-summary"><span>Ezio signal: <strong>'+esc(tier)+
+    '</strong></span><span>Accuracy: '+esc(accuracy?accuracy.replaceAll("_"," "):"not supplied")+
+    '</span><small>The gate checks company policy independently.</small></div>';
 }
 function renderResult(entry) {
   state.latest=entry; const result=entry.result;
@@ -192,7 +210,7 @@ function renderResult(entry) {
     '<div class="decision-top"><div><p class="decision-label">'+esc(contextLabel(entry.context))+
     '</p><h2 class="decision-title">'+esc(titleFor(result.decision))+'</h2></div>'+chip(result.decision)+'</div>'+
     '<div class="action-banner"><strong>'+esc(actionLabel(result))+'</strong></div>'+
-    '<p class="reason">'+esc(result.reason||"No reason returned.")+'</p>'+
+    '<p class="reason">'+esc(result.reason||"No reason returned.")+'</p>'+signalSummaryMarkup(result)+
     (primary?witnessMarkup(primary):"")+
     (review?'<form class="review" id="review-form"><strong style="font-size:13px">Next step: manager review</strong>'+
       '<p>Request a revision or reject this draft. A revised email must pass a fresh check before it can send.</p>'+
@@ -220,6 +238,9 @@ function renderCoverage() {
   document.querySelectorAll("[data-coverage]").forEach(item=>{
     const seen=state.coverage.has(item.dataset.coverage);
     item.classList.toggle("seen",seen);
+    const label={APPROVE:"Approved",BLOCK:"Blocked",HOLD_FOR_REVIEW:"Held for review"}[item.dataset.coverage];
+    const text=(seen?"✓ ":"○ ")+label;
+    if(item.textContent!==text)item.textContent=text;
     item.setAttribute("aria-label",item.dataset.coverage.replaceAll("_"," ")+(seen?": observed from backend":": not yet observed"));
   });
 }
@@ -234,7 +255,7 @@ function resetDemo() {
   state.latest=null;state.history=[];state.coverage.clear();
   loadDraft("",{});selectScenario(null);renderHistory();renderCoverage();clearError();
   $("result-content").innerHTML="";$("result-content").hidden=true;$("empty-state").hidden=false;
-  $("result-time").textContent="";$("boundary-output").innerHTML="";$("boundary-output").hidden=true;
+  $("result-time").textContent="READY TO TEST";$("boundary-output").innerHTML="";$("boundary-output").hidden=true;
   if($("session-details"))$("session-details").open=false;
   toast("Demo reset. Your saved audit trail is still available.");
 }
@@ -243,10 +264,11 @@ function renderHistory() {
     '<article class="history-card">'+chip(entry.result.decision)+'<p>'+esc(entry.text)+'</p>'+
     '<div class="history-meta">'+esc(entry.label)+' · '+esc(contextLabel(entry.context))+'</div>'+
     '<div class="history-action">'+esc(actionLabel(entry.result))+'</div>'+
-    '<button class="button small request-control" type="button" data-history="'+index+'">Inspect evidence</button></article>').join("");
+    '<button class="button small request-control" type="button" data-history="'+index+'">Inspect evidence</button></article>').join("") ||
+    '<p class="no-history">Run an example to start your session. Persistent records are available in the audit trail.</p>';
   document.querySelectorAll("[data-history]").forEach(button=>{
     button.disabled=state.pending;
-    button.addEventListener("click",()=>{if(state.pending)return;renderResult(state.history[Number(button.dataset.history)]);revealResult();});
+    button.addEventListener("click",()=>{if(state.pending)return;renderResult(state.history[Number(button.dataset.history)]);revealResult(true);});
   });
 }
 async function submitDraft(event) {
@@ -292,7 +314,7 @@ async function compareBoundary() {
         '<button class="button small request-control" style="margin-top:12px" type="button">Inspect evidence</button>';
       container.querySelector("button").disabled=true;
       container.querySelector("button").addEventListener("click",()=>{
-        if(state.pending)return;renderResult(entry);revealResult();
+        if(state.pending)return;renderResult(entry);revealResult(true);
       });
     });
   }catch(error){showError(error.message);}
@@ -397,7 +419,8 @@ async function init() {
       '<option value="'+esc(item.id)+'">'+esc(item.id)+' · '+esc(item.text.slice(0,57))+
       (item.text.length>57?"…":"")+'</option>').join(""):'<option value="">No practice inputs available</option>';
   }catch(error){
-    $("samples").innerHTML='<option value="">Practice inputs unavailable</option>';showError(error.message);
+    $("samples").innerHTML='<option value="">Practice inputs unavailable</option>';
+    showError("Could not load additional practice drafts. The three example buttons are still available. "+error.message);
   }
 }
 init();

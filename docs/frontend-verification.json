@@ -1,0 +1,44 @@
+{
+  "scenarios": [
+    {
+      "scenario": "approve",
+      "decision": "APPROVE",
+      "action_executed": true
+    },
+    {
+      "scenario": "block",
+      "decision": "BLOCK",
+      "action_executed": false
+    },
+    {
+      "scenario": "hold",
+      "decision": "HOLD_FOR_REVIEW",
+      "action_executed": false
+    },
+    {
+      "scenario": "block",
+      "decision": "BLOCK",
+      "action_executed": false
+    }
+  ],
+  "boundary": "BLOCK at 11 / APPROVE at 12",
+  "comparisonPreservesCustomDraft": true,
+  "greenSignalCanStillBlock": true,
+  "reviewPersists": true,
+  "revisedDraftRechecked": true,
+  "practiceDraftLoadsContext": true,
+  "emptyDraftMakesNoRequest": true,
+  "resetPreservesAudit": true,
+  "pendingDisablesControls": true,
+  "mobileWidthsWithoutOverflow": [
+    375,
+    390,
+    768,
+    1024
+  ],
+  "mobileResultVisible": true,
+  "interruptedRequestVisible": true,
+  "mobileErrorVisible": true,
+  "reducedMotionRespected": true,
+  "browserErrors": []
+}

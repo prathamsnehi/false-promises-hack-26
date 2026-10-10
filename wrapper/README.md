@@ -99,4 +99,4 @@ The client allows up to four attempts, with a 15-second per-attempt timeout and 
 
 Blocking everything produces a perfect catch rate and a terrible false-block rate. A GREEN tier with `not_scored` means accuracy was not checked. Neither shortcut is a successful decision policy.
 
-See the [challenge requirements and scoring](../README.md#minimum-requirements) before your demo.
+See the [challenge requirements and scoring](../docs/challenge-guide.md#minimum-requirements) before your demo.

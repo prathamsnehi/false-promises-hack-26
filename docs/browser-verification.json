@@ -8,6 +8,9 @@
   "mobileNoOverflow": true,
   "loadingControlsDisabled": true,
   "interruptedRequestVisible": true,
+  "oneClickScenarios": true,
+  "resetPreservesAudit": true,
+  "independentPricingClauses": true,
   "browserErrors": [],
   "expectedInterruptedRequestErrors": [
     "Failed to load resource: net::ERR_FAILED"

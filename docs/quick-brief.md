@@ -66,9 +66,9 @@ Company values live in [`policies.json`](../personas/customer_support/policies.j
 
 ## What we can honestly say
 
-Recorded practice verification: **47 unit tests passed, 34/34 mock checks, 16/16 exact practice decisions, zero false blocks on eight good practice cases, and all six failure drills passed.** Browser demo and review persistence were verified. These describe the recorded practice run.
+Recorded practice verification: **48 unit tests passed, 34/34 mock checks, 16/16 exact practice decisions, zero false blocks on eight good practice cases, and all six failure drills passed.** Browser demo and review persistence were verified. These describe the recorded practice run.
 
-A separate generated final report currently records **48.3 / 50 measured points**. The remaining 50 points come from judges. A report measures its recorded code version; later implementation changes require another run.
+A separate generated final report currently records **50.0 / 50 measured points**. The remaining 50 points come from judges. A report measures its recorded code version; later implementation changes require another run.
 
 The language recognizer uses bounded English patterns. Customer context is entered by the human. The action is a log entry, not real mail. Repeated approved requests can repeat the action; production authentication and idempotency are future work.
 

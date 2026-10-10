@@ -324,7 +324,7 @@ The recorded local verification is in [`verification.md`](verification.md):
 | Verification | Recorded result |
 |---|---|
 | Supplied mock checks | 34/34 |
-| Contract, harness, source-check, decision, and review unit tests | 47 tests passed |
+| Contract, harness, source-check, decision, and review unit tests | 48 tests passed |
 | Customer-support practice decisions | 16/16 exact; all eight bad caught; no false blocks on eight good cases |
 | Six supplied failure drills | All passed; 15/15 practice failure points |
 | Action accounting in the practice run | 28 audited requests, 11 APPROVE responses, 11 action-log entries |
@@ -336,7 +336,7 @@ The unit tests for the source checker isolate that checker; a local check passin
 
 These recorded practice results establish behavior on known cases and selected adversarial examples. They do not themselves establish an official held-out score, and the test count describes that recorded verification run rather than every later source revision.
 
-At the time of writing, the workspace also contains a generated final report recording **48.3 / 50 measured points**: 33.3 / 35 held-out points and 15 / 15 failure points. That report is a separate run artifact, not a claim that the project earned 48.3 out of 100; judges determine the remaining 50 points. Results apply to the wrapper version recorded in that run. If implementation changes afterward, a fresh official run is needed to measure the changed version. Submit the chosen run's generated JSON/report unchanged, and keep final-case contents out of public walkthroughs.
+At the time of writing, the workspace also contains a generated final report recording **50.0 / 50 measured points**: 35.0 / 35 held-out points and 15 / 15 failure points. That report is a separate run artifact, not a claim that the project earned 50.0 out of 100; judges determine the remaining 50 points. Results apply to the wrapper version recorded in that run. If implementation changes afterward, a fresh official run is needed to measure the changed version. Submit the chosen run's generated JSON/report unchanged, and keep final-case contents out of public walkthroughs.
 
 ## 13. Limits we should be able to explain
 

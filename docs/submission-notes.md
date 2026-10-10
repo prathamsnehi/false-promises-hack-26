@@ -34,14 +34,14 @@ python3 gate.py try --persona customer_support --context '{"plan":"Pro","custome
 python3 gate.py try --persona customer_support --context '{"plan":"Pro","customer_tenure_months":12}' 'You qualify for our 15% loyalty discount on the Pro plan.'
 ```
 
-After the organizer releases the final key, run personally, keeping default judging latency and timeout:
+The official run passed at **50.0/50**; see `docs/verification.md`. Its score screenshot is `docs/final-results.png`. To rerun after any wrapper changes, keep default judging latency and timeout:
 
 ```bash
 python3 gate.py judge --persona customer_support --team "False Promises"
 python3 gate.py results
 ```
 
-Upload the final `results/False Promises.json` and `results/False Promises.report.md` unchanged. Enter the measured score **out of 50** from that run, not a practice score. Capture the official results page with team, run time and measured-score card. Include persona screenshots/recording and the one-page policy in `docs/decision-policy.md`. Generate the public audit sample using practice-only `gate.py try` calls; do not copy final-run logs or inputs into public documentation.
+Upload the final `results/False Promises.json` and `results/False Promises.report.md` unchanged. Enter measured score **50.0 out of 50** for this verified run. Upload `docs/final-results.png`, which captures the official results page with team, run time and measured-score card. Include persona screenshots/recording and the one-page policy in `docs/decision-policy.md`. Generate the public audit sample using practice-only `gate.py try` calls; do not copy final-run logs or inputs into public documentation.
 
 ## Confirm only after checking
 
