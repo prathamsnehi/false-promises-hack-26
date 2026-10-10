@@ -281,8 +281,15 @@ def check(text, context, sot):
             boundaries = [m.start() for m in re.finditer(r"\b(?:and|or|but)\b|,", sentence)]
             left = max([b for b in boundaries if b < match.start()] or [0])
             right = min([b for b in boundaries if b > match.end()] or [len(sentence)])
-            price_clause = sentence[left:right] if len(money) > 1 else sentence
+            # A separate discount or response-time clause must not change the
+            # billing period of this price, even when it is the only amount.
+            price_clause = sentence[left:right]
             annual = bool(re.search(r"\b(?:annual|annually|yearly|per year|a year)\b|/yr\b", price_clause))
+            # A comma can introduce a billing modifier rather than another
+            # claim: 'billed annually, ...' or '..., billed annually'.
+            billing_modifier = r"(?:when\s+)?(?:billed|paid|charged)\s+(?:annually|yearly)"
+            annual = annual or bool(re.fullmatch(r"\s*" + billing_modifier + r"\s*", sentence[:left]))
+            annual = annual or bool(re.match(r",\s*" + billing_modifier + r"\b", sentence[right:]))
             annual_total = bool(re.search(r"^\s*(?:per year|a year|/year|/yr|annually|yearly)\b", following))
             key = "annual_price_per_month_usd" if annual else "monthly_price_usd"
             expected = float(prices[plan][key]) * (12 if annual_total else 1)

@@ -1,9 +1,21 @@
 "use strict";
 const PERSONA = "customer_support";
+const LOYALTY_OFFER = "You qualify for our 15% loyalty discount on the Pro plan.";
+// Examples describe an expected outcome; only /decide determines the actual result.
+const SCENARIOS = {
+  approve: {text:LOYALTY_OFFER, context:{plan:"Pro",customer_tenure_months:12},
+    label:"Eligible offer", description:"Expected: approve. This Pro customer has reached the 12-month loyalty threshold. The server checks the offer before the mock email can run."},
+  block: {text:LOYALTY_OFFER, context:{plan:"Pro",customer_tenure_months:11},
+    label:"Ineligible offer", description:"Expected: block. The exact same offer goes to an 11-month Pro customer, one month short of eligibility. Look for the customer and policy that disprove it."},
+  hold: {text:"I'll make sure engineering ships the custom export feature you asked for next month.",
+    context:{plan:"Business",customer_tenure_months:14}, label:"Unauthorized promise",
+    description:"Expected: hold for review. A support agent promises a product feature and delivery date. A manager must review the commitment; the email stays unsent."}
+};
+const DEFAULT_SCENARIO_DESCRIPTION = "Choose an example to run a real backend check, or edit the draft below. Only approved checks execute a local mock email.";
 const $ = id => document.getElementById(id);
 const state = {
   samples: [], context: {}, pending: false, latest: null, history: [], audit: [],
-  started: 0, timer: null, toastTimer: null, focusBeforeAudit: null
+  started: 0, timer: null, toastTimer: null, focusBeforeAudit: null, coverage: new Set(), activeScenario: null
 };
 const esc = value => String(value ?? "").replace(/[&<>"']/g, char =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -16,7 +28,7 @@ const present = value => {
 };
 const styleFor = decision => ({APPROVE:"approve",HOLD_FOR_REVIEW:"hold",BLOCK:"block"}[decision] || "unknown");
 const titleFor = decision => ({
-  APPROVE:"Ready to send",HOLD_FOR_REVIEW:"A manager should review",BLOCK:"This promise fails the check"
+  APPROVE:"This promise passes the check",HOLD_FOR_REVIEW:"A manager should review",BLOCK:"This promise fails the check"
 }[decision] || "Decision unavailable");
 const labelFor = decision => ({
   APPROVE:"✓ APPROVE",HOLD_FOR_REVIEW:"◷ HOLD FOR REVIEW",BLOCK:"⊘ BLOCK"
@@ -62,6 +74,7 @@ function setPending(pending, label="Checking policy and Ezio signals") {
   state.pending = pending;
   document.querySelectorAll(".request-control").forEach(el => el.disabled = pending);
   $("decision-panel").setAttribute("aria-busy", String(pending));
+  document.querySelectorAll("[data-scenario]").forEach(el => el.setAttribute("aria-busy", String(pending && el.dataset.scenario === state.activeScenario)));
   $("request-status").hidden = !pending;
   clearInterval(state.timer);
   if (pending) {
@@ -109,7 +122,8 @@ function draftChanged() {
 function addHistory(result,text,context,label="Current customer") {
   const entry={result,text,context:{...context},label,at:new Date().toISOString()};
   state.history.unshift(entry); state.history=state.history.slice(0,12);
-  renderHistory(); return entry;
+  if (["APPROVE", "BLOCK", "HOLD_FOR_REVIEW"].includes(result.decision)) state.coverage.add(result.decision);
+  renderHistory(); renderCoverage(); return entry;
 }
 function witnessMarkup(witness) {
   const found=witness.outcome==="counterexample_found";
@@ -155,33 +169,74 @@ function signalsMarkup(result) {
     '</strong><div class="mini">Accuracy: '+esc(status)+'<br>Gate decides independently.</div></div>'+
     metric("tone")+metric("bias")+metric("agreement")+'</div>';
 }
+function revealResult() {
+  const panel=$("decision-panel");
+  panel.setAttribute("tabindex","-1");
+  // Keep the side-by-side desktop workspace stable; bring mobile results into view.
+  if(window.matchMedia("(max-width: 900px)").matches) {
+    panel.focus({preventScroll:true});
+    panel.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"});
+  }
+}
 function renderResult(entry) {
   state.latest=entry; const result=entry.result;
   const witnesses=Array.isArray(result.counterexamples)?result.counterexamples:[];
   const evidence=Array.isArray(result.evidence)?result.evidence:[];
   const review=result.decision==="HOLD_FOR_REVIEW"&&result.decision_id;
+  const primary=witnesses.find(w=>w.outcome==="counterexample_found") ||
+    witnesses.find(w=>w.outcome==="insufficient_information") || witnesses[0];
+  const remaining=witnesses.filter(w=>w!==primary);
   $("empty-state").hidden=true; $("result-content").hidden=false; $("result-time").textContent=time(entry.at);
-  $("result-content").innerHTML='<div class="result-main">'+
+  $("result-content").innerHTML='<div class="result-main" data-outcome="'+esc(result.decision)+'">'+
     '<div class="notice stale" id="stale-result" hidden>This decision belongs to another draft or customer context. Check the current draft before sending.</div>'+
     '<div class="decision-top"><div><p class="decision-label">'+esc(contextLabel(entry.context))+
     '</p><h2 class="decision-title">'+esc(titleFor(result.decision))+'</h2></div>'+chip(result.decision)+'</div>'+
+    '<div class="action-banner"><strong>'+esc(actionLabel(result))+'</strong></div>'+
     '<p class="reason">'+esc(result.reason||"No reason returned.")+'</p>'+
-    '<div class="action-banner"><strong>'+esc(actionLabel(result))+'</strong></div>'+signalsMarkup(result)+
-    (witnesses.length?'<p class="section-label">Challenge the claim</p>'+witnesses.map(witnessMarkup).join(""):"")+
-    checksMarkup(result.checks)+'<details '+(!witnesses.length&&!result.checks?.length?"open":"")+
-    '><summary class="section-label">Supporting evidence · '+evidence.length+'</summary><ul class="evidence-list">'+
-    (evidence.length?evidence.map(line=>'<li>'+esc(present(line))+'</li>').join(""):"<li>The server supplied no supporting evidence.</li>")+
-    '</ul></details>'+
-    (review?'<form class="review" id="review-form"><strong style="font-size:13px">Manager review</strong>'+
-      '<p>Log a reason to reject or request revision. A revised email must pass the gate again.</p>'+
+    (primary?witnessMarkup(primary):"")+
+    (review?'<form class="review" id="review-form"><strong style="font-size:13px">Next step: manager review</strong>'+
+      '<p>Request a revision or reject this draft. A revised email must pass a fresh check before it can send.</p>'+
       '<label for="review-note">Review rationale</label><textarea id="review-note" maxlength="1000" class="request-control" '+
       'placeholder="Explain what needs to change, or why this draft should be rejected." required></textarea>'+
       '<div class="review-controls"><select id="review-disposition" class="request-control" aria-label="Review disposition">'+
       '<option value="request_revision">Request revision</option><option value="reject">Reject draft</option></select>'+
       '<button class="button request-control" type="submit">Log review</button></div></form>':"")+
-    (result.decision_id?'<div class="audit-id">Decision '+esc(result.decision_id)+'</div>':"")+'</div>';
+    '<details class="result-details"><summary>Inspect checks &amp; supporting evidence</summary>'+
+    checksMarkup(result.checks)+(remaining.length?remaining.map(witnessMarkup).join(""):"")+
+    '<p class="section-label">Supporting evidence · '+evidence.length+'</p><ul class="evidence-list">'+
+    (evidence.length?evidence.map(line=>'<li>'+esc(present(line))+'</li>').join(""):"<li>The server supplied no supporting evidence.</li>")+
+    '</ul>'+(result.decision_id?'<div class="audit-id">Decision '+esc(result.decision_id)+'</div>':"")+'</details>'+
+    '<details class="result-details"><summary>Inspect Ezio quality signals</summary>'+signalsMarkup(result)+'</details></div>';
   if(review)$("review-form").addEventListener("submit",submitReview);
+  $("result-content").querySelectorAll(".request-control").forEach(el=>el.disabled=state.pending);
   draftChanged();
+}
+function selectScenario(key) {
+  state.activeScenario=key;
+  document.querySelectorAll("[data-scenario]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.scenario===key)));
+  if($("scenario-description"))$("scenario-description").textContent=SCENARIOS[key]?.description || DEFAULT_SCENARIO_DESCRIPTION;
+}
+function renderCoverage() {
+  document.querySelectorAll("[data-coverage]").forEach(item=>{
+    const seen=state.coverage.has(item.dataset.coverage);
+    item.classList.toggle("seen",seen);
+    item.setAttribute("aria-label",item.dataset.coverage.replaceAll("_"," ")+(seen?": observed from backend":": not yet observed"));
+  });
+}
+async function runScenario(key) {
+  if(state.pending||!SCENARIOS[key])return;
+  const scenario=SCENARIOS[key];
+  loadDraft(scenario.text,scenario.context); selectScenario(key);
+  await runDraft(scenario.label);
+}
+function resetDemo() {
+  if(state.pending)return;
+  state.latest=null;state.history=[];state.coverage.clear();
+  loadDraft("",{});selectScenario(null);renderHistory();renderCoverage();clearError();
+  $("result-content").innerHTML="";$("result-content").hidden=true;$("empty-state").hidden=false;
+  $("result-time").textContent="";$("boundary-output").innerHTML="";$("boundary-output").hidden=true;
+  if($("session-details"))$("session-details").open=false;
+  toast("Demo reset. Your saved audit trail is still available.");
 }
 function renderHistory() {
   $("session-history").innerHTML=state.history.slice(0,6).map((entry,index)=>
@@ -191,49 +246,53 @@ function renderHistory() {
     '<button class="button small request-control" type="button" data-history="'+index+'">Inspect evidence</button></article>').join("");
   document.querySelectorAll("[data-history]").forEach(button=>{
     button.disabled=state.pending;
-    button.addEventListener("click",()=>renderResult(state.history[Number(button.dataset.history)]));
+    button.addEventListener("click",()=>{if(state.pending)return;renderResult(state.history[Number(button.dataset.history)]);revealResult();});
   });
 }
 async function submitDraft(event) {
-  event.preventDefault(); if(state.pending)return; clearError(); let draft;
+  event.preventDefault(); await runDraft();
+}
+async function runDraft(label="Custom draft") {
+  if(state.pending)return; clearError(); let draft;
   try{draft=readDraft();}catch(error){showError(error.message);return;}
   setPending(true);
-  try{const result=await decide(draft.text,draft.context);renderResult(addHistory(result,draft.text,draft.context));}
-  catch(error){showError(error.message);}
+  try{
+    const result=await decide(draft.text,draft.context);
+    renderResult(addHistory(result,draft.text,draft.context,label));revealResult();
+  }catch(error){showError(error.message);}
   finally{setPending(false);}
 }
 async function compareBoundary() {
-  if(state.pending)return; clearError(); let draft;
-  try{draft=readDraft();}catch(error){showError(error.message);return;}
+  if(state.pending)return; clearError();
   const contexts=[
-    {...draft.context,plan:"Pro",customer_tenure_months:11},
-    {...draft.context,plan:"Pro",customer_tenure_months:12}
+    {plan:"Pro",customer_tenure_months:11},
+    {plan:"Pro",customer_tenure_months:12}
   ];
+  const header=index=>'<span class="small-label">'+(index===0?"BEFORE ELIGIBILITY":"AT ELIGIBILITY")+
+    '</span><h3>Pro · '+contexts[index].customer_tenure_months+' months</h3>';
   const output=$("boundary-output"); output.hidden=false;
-  output.innerHTML='<div class="boundary-draft">Same draft: “'+esc(draft.text)+'”</div><div class="boundary-results">'+
-    contexts.map((context,index)=>'<article class="boundary-result" id="boundary-'+index+'">'+
-    '<span class="small-label">HYPOTHETICAL PRO CUSTOMER</span><h3>'+context.customer_tenure_months+
-    ' months</h3><div class="boundary-loading">Waiting for backend decision…</div></article>').join("")+'</div>';
-  setPending(true,"Comparing two hypothetical customers");
+  output.innerHTML='<div class="boundary-draft">Same offer. One month makes the difference.<br>“'+esc(LOYALTY_OFFER)+'”</div><div class="boundary-results">'+
+    contexts.map((context,index)=>'<article class="boundary-result" id="boundary-'+index+'">'+header(index)+
+    '<div class="boundary-loading">Waiting for backend decision…</div></article>').join("")+'</div>';
+  setPending(true,"Checking the same offer at 11 and 12 months");
   try{
-    // Two real requests; no expected decisions are supplied or inferred in the browser.
-    const results=await Promise.allSettled(contexts.map(context=>decide(draft.text,context)));
+    // Ordinary backend decisions: approvals execute the local mock email and every outcome is audited.
+    const results=await Promise.allSettled(contexts.map(context=>decide(LOYALTY_OFFER,context)));
     results.forEach((response,index)=>{
       const context=contexts[index],container=$("boundary-"+index);
-      const header='<span class="small-label">HYPOTHETICAL PRO CUSTOMER</span><h3>'+context.customer_tenure_months+' months</h3>';
       if(response.status==="rejected"){
-        container.innerHTML=header+'<p class="reason">'+esc(response.reason.message)+'</p><div class="action">? Action status unknown</div>';
+        container.innerHTML=header(index)+'<p class="reason">'+esc(response.reason.message)+'</p><div class="action">? Action status unknown</div>';
         return;
       }
-      const result=response.value,entry=addHistory(result,draft.text,context,"Boundary test");
+      const result=response.value,entry=addHistory(result,LOYALTY_OFFER,context,"11 / 12 month comparison");
       const found=(Array.isArray(result.counterexamples)?result.counterexamples:[]).find(witness=>witness.outcome==="counterexample_found");
-      container.innerHTML=header+chip(result.decision)+'<p class="reason">'+
+      container.innerHTML=header(index)+chip(result.decision)+'<p class="reason">'+
         esc(found?.failed_condition?present(found.failed_condition):result.reason)+
         '</p><div class="action">'+esc(actionLabel(result))+'</div>'+
         '<button class="button small request-control" style="margin-top:12px" type="button">Inspect evidence</button>';
       container.querySelector("button").disabled=true;
       container.querySelector("button").addEventListener("click",()=>{
-        renderResult(entry);$("decision-panel").scrollIntoView({behavior:"smooth",block:"start"});
+        if(state.pending)return;renderResult(entry);revealResult();
       });
     });
   }catch(error){showError(error.message);}
@@ -242,6 +301,7 @@ async function compareBoundary() {
 async function submitReview(event) {
   event.preventDefault(); if(state.pending||!state.latest)return;
   const note=$("review-note").value.trim(),disposition=$("review-disposition").value,entry=state.latest;
+  let saved=false;
   if(!note){toast("Add a rationale before recording the review.");$("review-note").focus();return;}
   clearError();setPending(true,"Recording manager review");
   try{
@@ -249,15 +309,16 @@ async function submitReview(event) {
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({decision_id:entry.result.decision_id,disposition,note})
     });
+    saved=true;
     if(disposition==="request_revision"){
-      loadDraft(entry.text,entry.context);
+      selectScenario(null);loadDraft(entry.text,entry.context);
       toast("Revision requested and logged. Edit the draft, then run a fresh check.");
     }else toast("Rejection logged. The held email remains unsent.");
     const form=$("review-form");
     if(form)form.innerHTML='<div class="notice">'+(disposition==="reject"?"Draft rejected":"Revision requested")+
       '. Review rationale logged: '+esc(note)+'. No action was executed by this review.</div>';
   }catch(error){showError(error.message);}
-  finally{setPending(false);if(disposition==="request_revision")$("text").focus();}
+  finally{setPending(false);if(saved&&disposition==="request_revision")$("text").focus();}
 }
 function renderAudit() {
   $("audit-body").innerHTML=state.audit.length?state.audit.map((entry,index)=>
@@ -275,13 +336,14 @@ function renderAudit() {
     '<div class="audit-id">'+esc(entry.decision_id||"Decision ID unavailable")+'</div></article>').join(""):
     '<p class="small-label">No decision records yet. Check a draft to create a persistent audit entry.</p>';
   document.querySelectorAll("[data-audit]").forEach(button=>button.addEventListener("click",()=>{
+    if(state.pending)return;
     const entry=state.audit[Number(button.dataset.audit)];
     const result={
       decision:entry.decision,reason:entry.reason,evidence:entry.evidence,ezio:entry.ezio,
       checks:entry.checks,counterexamples:entry.counterexamples,decision_id:entry.decision_id,
       action_executed:entry.action_executed
     };
-    loadDraft(entry.input||entry.text||"",entry.context||{});
+    selectScenario(null);loadDraft(entry.input||entry.text||"",entry.context||{});
     renderResult({result,text:entry.input||entry.text||"",context:entry.context||{},at:entry.timestamp,label:"Audit record"});
     closeAudit();$("review-note")?.focus();
   }));
@@ -304,9 +366,11 @@ $("draft-form").addEventListener("submit",submitDraft);
 $("compare").addEventListener("click",compareBoundary);
 $("load-sample").addEventListener("click",()=>{
   const sample=state.samples.find(item=>item.id===$("samples").value);
-  if(sample){loadDraft(sample.text,sample.context);toast("Practice draft loaded with its customer context. Check it to see the gate's decision.");}
+  if(sample&&!state.pending){selectScenario(null);loadDraft(sample.text,sample.context);toast("Practice draft loaded with its customer context. Check it to see the gate's decision.");}
 });
-["text","plan","tenure"].forEach(id=>$(id).addEventListener("input",draftChanged));
+["text","plan","tenure"].forEach(id=>$(id).addEventListener("input",()=>{selectScenario(null);draftChanged();}));
+document.querySelectorAll("[data-scenario]").forEach(button=>button.addEventListener("click",()=>runScenario(button.dataset.scenario)));
+$("reset-demo")?.addEventListener("click",resetDemo);
 $("open-audit").addEventListener("click",openAudit);
 $("close-audit").addEventListener("click",closeAudit);
 $("refresh-audit").addEventListener("click",refreshAudit);
@@ -325,7 +389,7 @@ document.addEventListener("keydown",event=>{
   }
 });
 async function init() {
-  draftChanged();
+  draftChanged();renderCoverage();selectScenario(null);
   try{
     const body=await request("/api/samples?persona="+PERSONA);
     state.samples=Array.isArray(body.samples)?body.samples:[];

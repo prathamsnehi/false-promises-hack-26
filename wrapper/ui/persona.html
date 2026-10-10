@@ -4,54 +4,79 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Find the Exception · False Promises</title>
+<meta name="description" content="A good AI score can still hide a false promise. Test how Approval Gate checks policy and customer eligibility before an email is sent.">
+<title>Approval Gate · Catch the false promise</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+<a class="skip-link" href="#demo-scenarios">Skip to interactive demo</a>
 <div class="shell">
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-name">LUMEN<span class="brand-sub">CUSTOMER SUPPORT DESK</span></div></div>
-    <div class="top-actions"><span class="local">Local simulation · fictional data</span><button class="button small request-control" id="open-audit">View audit trail ↗</button></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-name">APPROVAL GATE<span class="brand-sub">FALSE PROMISES · CUSTOMER SUPPORT</span></div></div>
+    <div class="top-actions"><span class="local">Live local demo · no real emails</span><button class="button small request-control" id="open-audit" type="button">Audit trail ↗</button></div>
   </header>
   <section class="hero" aria-labelledby="page-title">
-    <div><p class="eyebrow">False Promises / Find the Exception</p><h1 id="page-title">Before you hit send,<br><span>challenge the promise.</span></h1><p>A clean score is one signal. Check the policy, find a customer the claim fails, and let the gate decide.</p></div>
-    <div class="workflow" aria-label="Decision workflow"><span><b>1</b> Read signals</span><span class="arrow">→</span><span><b>2</b> Check the claim</span><span class="arrow">→</span><span><b>3</b> Gate the email</span></div>
+    <div class="hero-copy"><p class="eyebrow">A trust score is a signal. Sending is a decision.</p><h1 id="page-title">Good AI score.<br><span>Wrong promise?</span></h1><p>We check company policy and customer eligibility before an AI-written email can be sent. A false promise gets stopped. A valid one gets through.</p><p class="hero-proof">Try all three outcomes below. Every result comes from the live gate.</p></div>
+    <div class="workflow" aria-label="How Approval Gate works"><span><b>1</b> AI draft</span><span class="arrow" aria-hidden="true">→</span><span><b>2</b> Policy + customer</span><span class="arrow" aria-hidden="true">→</span><span><b>3</b> Send or stop</span></div>
   </section>
   <main>
+    <section class="demo-section" id="demo-scenarios" aria-labelledby="demo-title">
+      <div class="section-head"><div><p class="eyebrow">Start here · one click per example</p><h2 id="demo-title">See what gets through. And what doesn’t.</h2></div><button class="button small subtle request-control" type="button" id="reset-demo" title="Clear this browser session. Persistent audit records are kept.">Reset demo</button></div>
+      <div class="demo-grid">
+        <button class="demo-card request-control" type="button" data-scenario="approve" aria-pressed="false">
+          <span class="demo-card-number" aria-hidden="true">01</span><span class="demo-card-icon" aria-hidden="true">✓</span>
+          <span class="demo-card-copy"><strong class="demo-card-title">Run passing example</strong><span class="demo-card-description">15% loyalty offer. Pro customer, 12 months. Eligible.</span><span class="demo-expectation">Expected outcome: APPROVE · simulate send</span></span>
+          <span class="demo-card-arrow" aria-hidden="true">↗</span>
+        </button>
+        <button class="demo-card request-control" type="button" data-scenario="block" aria-pressed="false">
+          <span class="demo-card-number" aria-hidden="true">02</span><span class="demo-card-icon" aria-hidden="true">×</span>
+          <span class="demo-card-copy"><strong class="demo-card-title">Run failing example</strong><span class="demo-card-description">Same 15% offer. Pro customer, 11 months. Too soon.</span><span class="demo-expectation">Expected outcome: BLOCK · stop the email</span></span>
+          <span class="demo-card-arrow" aria-hidden="true">↗</span>
+        </button>
+        <button class="demo-card request-control" type="button" data-scenario="hold" aria-pressed="false">
+          <span class="demo-card-number" aria-hidden="true">03</span><span class="demo-card-icon" aria-hidden="true">?</span>
+          <span class="demo-card-copy"><strong class="demo-card-title">Run review example</strong><span class="demo-card-description">A promised feature delivery date needs a manager.</span><span class="demo-expectation">Expected outcome: HOLD · request review</span></span>
+          <span class="demo-card-arrow" aria-hidden="true">↗</span>
+        </button>
+      </div>
+      <div class="demo-progress" id="demo-progress" aria-live="polite" aria-atomic="true"><span class="small-label">Outcomes explored</span><span data-coverage="APPROVE">○ Approved</span><span data-coverage="BLOCK">○ Blocked</span><span data-coverage="HOLD_FOR_REVIEW">○ Held for review</span></div>
+      <p class="scenario-description" id="scenario-description">Choose an example to run it instantly, or edit the draft below to try your own.</p>
+    </section>
     <div class="workspace">
       <section class="panel" aria-labelledby="composer-title">
-        <div class="panel-header"><h2 class="panel-title" id="composer-title">Customer email</h2><span class="pill">DRAFT → GATE → ACTION</span></div>
+        <div class="panel-header"><h2 class="panel-title" id="composer-title">Try your own draft</h2><span class="pill">EDITABLE INPUT</span></div>
         <form class="composer" id="draft-form">
-          <div class="sample-row"><div><label for="samples">Practice scenarios</label><select id="samples" class="request-control"><option value="">Loading practice inputs…</option></select></div><button class="button request-control" id="load-sample" type="button">Load draft</button></div>
-          <div class="context-row"><div><label for="plan">Customer plan</label><select id="plan" class="request-control"><option>Starter</option><option selected>Pro</option><option>Business</option><option>Enterprise</option><option value="">Unknown</option></select></div><div><label for="tenure">Customer tenure · months</label><input id="tenure" class="request-control" type="number" min="0" max="1200" step="1" value="18" placeholder="Unknown"></div></div>
-          <div class="mail-head"><span>TO <strong>customer@example.com</strong></span><span>Re: your question</span></div>
-          <label for="text">Email draft</label><textarea id="text" class="request-control" maxlength="20000" spellcheck="true">You qualify for our 15% loyalty discount on the Pro plan.</textarea>
-          <div class="text-meta"><span>Edit freely. The gate checks your actual draft.</span><span id="character-count">0 / 20,000</span></div>
+          <div class="context-row"><div><label for="plan">Customer plan</label><select id="plan" class="request-control"><option>Starter</option><option selected>Pro</option><option>Business</option><option>Enterprise</option><option value="">Unknown</option></select></div><div><label for="tenure">Customer tenure · months</label><input id="tenure" class="request-control" type="number" min="0" max="1200" step="1" value="12" placeholder="Unknown"></div></div>
+          <div class="mail-head"><span>TO <strong>customer@example.com</strong></span><span>Simulated email</span></div>
+          <label for="text">Email draft</label><textarea id="text" class="request-control" maxlength="20000" spellcheck="true" aria-describedby="draft-hint">You qualify for our 15% loyalty discount on the Pro plan.</textarea>
+          <div class="text-meta"><span id="draft-hint">Change the promise or customer. Then check again.</span><span id="character-count">0 / 20,000</span></div>
           <button class="button primary request-control" id="check" type="submit">Check draft &amp; simulate send <span aria-hidden="true">↗</span></button>
-          <p class="submit-note">Only a backend APPROVE can execute the simulated email.</p>
+          <p class="submit-note">Only APPROVE sends a simulated email. No real email is sent.</p>
           <div class="status-line" id="request-status" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="request-status-text"></span></div>
           <div class="error" id="request-error" role="alert" hidden></div>
+          <details class="practice-library"><summary>More practice drafts</summary><div class="sample-row"><div><label for="samples">Choose a practice scenario</label><select id="samples" class="request-control"><option value="">Loading practice inputs…</option></select></div><button class="button request-control" id="load-sample" type="button">Load draft</button></div></details>
         </form>
       </section>
-      <section class="panel" aria-labelledby="decision-panel-title" aria-live="polite" aria-busy="false" id="decision-panel">
-        <div class="panel-header"><h2 class="panel-title" id="decision-panel-title">Decision &amp; evidence</h2><span class="pill" id="result-time">AWAITING A DRAFT</span></div>
-        <div class="empty" id="empty-state"><div class="empty-mark" aria-hidden="true">⌕</div><h2>The score is where<br>the check begins.</h2><p>Run a draft to see the evidence behind the decision and whether the customer email was allowed through.</p><div class="question-card"><p class="eyebrow">The question we ask</p><strong>Who would this promise fail?</strong><p>A correct discount can still be wrong for a customer who is not eligible. Find the exception before the email leaves.</p></div><div class="principle"><b aria-hidden="true">✓</b><span>Company policy + customer context + Ezio signals.</span></div></div>
+      <section class="panel" aria-labelledby="decision-panel-title" aria-live="polite" aria-busy="false" id="decision-panel" tabindex="-1">
+        <div class="panel-header"><h2 class="panel-title" id="decision-panel-title">The gate’s decision</h2><span class="pill" id="result-time">READY TO TEST</span></div>
+        <div class="empty" id="empty-state"><div class="empty-mark" aria-hidden="true">⌕</div><h2>Would you send<br>this promise?</h2><p>Run any example to see the decision, the policy behind it, and whether the email was sent or stopped.</p><div class="question-card"><p class="eyebrow">The catch a score can miss</p><strong>Right discount. Wrong customer.</strong><p>A 15% loyalty discount is real. But a Pro customer needs 12 months of tenure to qualify. One missing month changes the decision.</p></div><div class="principle"><b aria-hidden="true">✓</b><span>Policy evidence, customer context, and an auditable action.</span></div></div>
         <div id="result-content" hidden></div>
       </section>
     </div>
-    <section class="boundary" aria-labelledby="boundary-title">
-      <div class="boundary-head"><div><p class="eyebrow">One draft. Two customers.</p><h2 id="boundary-title">Find the eligibility boundary.</h2><p>Challenge the draft above against hypothetical Pro customers at 11 and 12 months. Both decisions come from the same backend gate.</p></div><button class="button request-control" type="button" id="compare">Compare eligibility boundary ↗</button></div>
-      <p class="boundary-note">Hypothetical test contexts only. Your selected customer's plan and tenure stay unchanged. Each APPROVE executes one simulated email.</p>
+    <section class="boundary" id="boundary-demo" aria-labelledby="boundary-title">
+      <div class="boundary-head"><div><p class="eyebrow">The moment that matters</p><h2 id="boundary-title">One month. A different decision.</h2><p>Test the exact same 15% Pro loyalty offer at 11 and 12 months. The discount is valid. Customer eligibility makes the difference.</p></div><button class="button request-control" type="button" id="compare">Run the 11 vs. 12 month test ↗</button></div>
+      <div class="boundary-preview" aria-label="Two hypothetical Pro customers"><div class="boundary-preview-case"><strong>11 months</strong><span>Below the policy threshold</span></div><span class="boundary-preview-arrow" aria-hidden="true">→</span><div class="boundary-preview-case"><strong>12 months</strong><span>Meets the policy threshold</span></div></div>
+      <p class="boundary-note">Two live gate decisions using a fixed example. Your draft stays unchanged. Each approval sends one simulated email.</p>
       <div id="boundary-output" hidden></div>
     </section>
-    <section class="session" aria-labelledby="history-title"><div class="section-head"><h2 id="history-title">This session</h2><span class="small-label">Real decisions. Visible action outcomes.</span></div><div id="session-history" class="session-grid"><p class="no-history">Run a good draft, a bad claim, and a review case to compare the gate's decisions.</p></div></section>
+    <details class="session" id="session-details"><summary class="section-head"><h2 id="history-title">Your session history</h2><span class="small-label">Revisit decisions &amp; evidence</span></summary><div id="session-history" class="session-grid"><p class="no-history">Run an example to start your session. Persistent records are available in the audit trail.</p></div></details>
   </main>
-  <footer class="footer"><span>False Promises · Lumen Cloud synthetic policy · runs on this laptop</span><span>Policy decides. Evidence explains. The backend executes.</span></footer>
+  <footer class="footer"><span>False Promises · Fictional Lumen Cloud policy · Local simulation</span><span>Policy decides. Evidence explains. Only approval sends.</span></footer>
 </div>
 <div class="modal-backdrop" id="audit-modal" hidden>
   <section class="audit-drawer" role="dialog" aria-modal="true" aria-labelledby="audit-title" tabindex="-1" id="audit-dialog">
-    <div class="drawer-head"><div><h2 id="audit-title">Decision audit trail</h2><p>Persistent backend records · latest 30 decisions</p></div><div class="drawer-controls"><button class="button small request-control" id="refresh-audit">Refresh</button><button class="button small" id="close-audit" aria-label="Close audit trail">✕</button></div></div>
+    <div class="drawer-head"><div><h2 id="audit-title">Decision audit trail</h2><p>Persistent backend records · latest 30 decisions</p></div><div class="drawer-controls"><button class="button small request-control" id="refresh-audit" type="button">Refresh</button><button class="button small" id="close-audit" type="button" aria-label="Close audit trail">✕</button></div></div>
     <div class="audit-body" id="audit-body"><p class="small-label">Loading audit trail…</p></div>
   </section>
 </div>

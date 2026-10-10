@@ -8,3 +8,6 @@ __pycache__/
 *.jsonl
 runs/
 results/*.practice.*
+# Official artifacts contain held-out inputs. Submit these files directly.
+results/*.json
+results/*.report.md

@@ -18,6 +18,8 @@ The signature demo compares the same loyalty offer for hypothetical Pro customer
 
 See [the implemented decision policy](docs/decision-policy.md), [submission and demo notes](docs/submission-notes.md), and [wrapper interfaces](wrapper/README.md). The original challenge documentation follows.
 
+For the team: read [the quick brief](docs/quick-brief.md) before presenting, then [the detailed implementation walkthrough](docs/implementation-walkthrough.md) to understand the counterexample search, decision policy, action gate, and limitations.
+
 An **Ezio AI** participant starter for the Decision-Grade AI Buildathon. Build a decision wrapper around a **local simulated Ezio API**, not another scoring engine and not the live Ezio product.
 
 > **This repository is fully self-contained.** Everything runs on your own laptop. You never expose your code to the network, and judges never set anything up: the final judging set is delivered to you in the last 30 minutes, and one command runs it against your wrapper. No live Ezio key, paid credits, or external dependencies are required. Python 3.9 or newer, standard library only.

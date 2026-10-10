@@ -101,6 +101,17 @@ class SourceCheckTests(unittest.TestCase):
         self.assertEqual(self.decision("Pro is $49 monthly or $39.00/month billed annually."), "BLOCK")
         self.assertEqual(self.decision("Starter costs fifteen dollars and twenty cents per month billed annually."), "APPROVE")
 
+    def test_separate_discount_clause_does_not_change_price_period(self):
+        for plan, monthly, annual in (("Starter", 19, 15.20), ("Pro", 49, 39.20)):
+            with self.subTest(plan=plan):
+                self.assertEqual(self.decision(f"{plan} costs ${monthly}/month, and annual billing saves 20%."), "APPROVE")
+                self.assertEqual(self.decision(f"Yearly billing saves 20%, and {plan} costs ${monthly} monthly."), "APPROVE")
+                self.assertEqual(self.decision(f"{plan} costs ${monthly - 1}/month, and annual billing saves 20%."), "BLOCK")
+                self.assertEqual(self.decision(f"{plan} costs ${annual:.2f}/month billed annually and includes support."), "APPROVE")
+                self.assertEqual(self.decision(f"{plan} costs ${annual:.2f}/month, billed annually."), "APPROVE")
+                self.assertEqual(self.decision(f"Billed annually, {plan} costs ${annual:.2f}/month."), "APPROVE")
+                self.assertEqual(self.decision(f"{plan} costs ${monthly}/month billed annually and includes support."), "BLOCK")
+
     def test_universal_annual_discounts_include_enterprise_unless_scoped(self):
         self.assertEqual(self.decision("Every customer receives a 20% annual billing discount."), "BLOCK")
         self.assertEqual(self.decision("Every self-serve customer receives a 20% annual billing discount."), "APPROVE")
