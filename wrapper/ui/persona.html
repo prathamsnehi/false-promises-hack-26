@@ -1,79 +1,61 @@
 <!doctype html>
-<!--
-  YOUR PERSONA PAGE. This is a skeleton; the UI is yours to design (25 points, optional).
-  Any approach is fine: edit this file, replace it with a built React/Vue/Svelte app in this folder,
-  or write plain JS. wrapper/serve.py serves everything in wrapper/ui/, with persona.html at "/".
-  Offline only: no CDNs or external services at demo time.
-
-  WHAT THE PAGE MUST DO (what judges score)
-    1. SEND AN INPUT, GET A RESPONSE: a draft goes to POST /decide (your wrapper), and the page shows the
-       decision, the reason, the evidence, and whether the mock action ran.
-    2. SIMULATE THE ACTION FROM A TEST INPUT: let the user pick a sample input (GET /api/samples?persona=...),
-       send it, and show the gate working: APPROVE -> the action ran; HOLD/BLOCK -> the action did NOT run.
-    3. Make it usable by someone in your persona's job: clear risk, errors shown plainly, a review step.
-
-  RULES
-    - Decisions come only from POST /decide. Do not decide, call the mock, or run the action in the browser.
-    - Latest test-run results are NOT your job: run `python3 gate.py results` for the color-coded viewer.
--->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TODO: your page title</title>
-<style>
-  /* TODO: design it. Think about who uses this: the person who is about to send / submit / publish. */
-  body { font: 16px/1.5 system-ui, sans-serif; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; }
-  textarea { width: 100%; min-height: 8rem; }
-</style>
+<meta name="color-scheme" content="light">
+<title>Find the Exception · Lumen Support</title>
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<h1>TODO: name this screen for your persona's job</h1>
-
-<!-- TODO (1): inputs. Text is required; context is a JSON object your persona rules may use. -->
-<label for="text">Draft</label>
-<textarea id="text"></textarea>
-<button id="check">Check</button>
-
-<!-- TODO (2): sample picker. Fill this from /api/samples (see loadSamples below). -->
-<select id="samples"></select>
-<button id="simulate">Simulate with this sample</button>
-
-<!-- TODO (3): present the result for a human, not as raw JSON. Replace this <pre>. -->
-<pre id="out"></pre>
-
-<script>
-// Set this to the persona you chose: customer_support | paralegal | financial_analyst
-const PERSONA = "customer_support";
-
-// Plumbing: the one call every version of this page makes. Returns {decision, reason, evidence, action_executed, ...}.
-async function decide(text, context = {}) {
-  const response = await fetch("/decide", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, persona: PERSONA, context }) });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || "Request failed");
-  return body;
-}
-
-// Plumbing: sample inputs from the practice set: [{id, text, context}, ...]
-async function loadSamples() {
-  const response = await fetch("/api/samples?persona=" + PERSONA);
-  return (await response.json()).samples;
-}
-
-// TODO: show the result. Decision, reason, and evidence are what a person needs to decide; also show
-// whether the action ran (result.action_executed). Handle loading and errors (including a slow or down Ezio).
-function showResult(result) {
-  document.getElementById("out").textContent = JSON.stringify(result, null, 2);
-}
-
-// TODO: wire the buttons. Disable them while a request is running; catch errors and show them.
-document.getElementById("check").onclick = async () => {
-  showResult(await decide(document.getElementById("text").value));
-};
-
-// TODO: populate #samples from loadSamples(), then make "Simulate" send the chosen sample's text and context
-// through decide() and show clearly whether the action ran.
-</script>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-name">LUMEN<span class="brand-sub">CUSTOMER SUPPORT DESK</span></div></div>
+    <div class="top-actions"><span class="local">Local simulation · fictional data</span><button class="button small request-control" id="open-audit">View audit trail ↗</button></div>
+  </header>
+  <section class="hero" aria-labelledby="page-title">
+    <div><p class="eyebrow">Find the Exception / Approval Gate</p><h1 id="page-title">Before you hit send,<br><span>challenge the promise.</span></h1><p>A clean score is one signal. Check the policy, find a customer the claim fails, and let the gate decide.</p></div>
+    <div class="workflow" aria-label="Decision workflow"><span><b>1</b> Read signals</span><span class="arrow">→</span><span><b>2</b> Check the claim</span><span class="arrow">→</span><span><b>3</b> Gate the email</span></div>
+  </section>
+  <main>
+    <div class="workspace">
+      <section class="panel" aria-labelledby="composer-title">
+        <div class="panel-header"><h2 class="panel-title" id="composer-title">Customer email</h2><span class="pill">DRAFT → GATE → ACTION</span></div>
+        <form class="composer" id="draft-form">
+          <div class="sample-row"><div><label for="samples">Practice scenarios</label><select id="samples" class="request-control"><option value="">Loading practice inputs…</option></select></div><button class="button request-control" id="load-sample" type="button">Load draft</button></div>
+          <div class="context-row"><div><label for="plan">Customer plan</label><select id="plan" class="request-control"><option>Starter</option><option selected>Pro</option><option>Business</option><option>Enterprise</option><option value="">Unknown</option></select></div><div><label for="tenure">Customer tenure · months</label><input id="tenure" class="request-control" type="number" min="0" max="1200" step="1" value="18" placeholder="Unknown"></div></div>
+          <div class="mail-head"><span>TO <strong>customer@example.com</strong></span><span>Re: your question</span></div>
+          <label for="text">Email draft</label><textarea id="text" class="request-control" maxlength="20000" spellcheck="true">You qualify for our 15% loyalty discount on the Pro plan.</textarea>
+          <div class="text-meta"><span>Edit freely. The gate checks your actual draft.</span><span id="character-count">0 / 20,000</span></div>
+          <button class="button primary request-control" id="check" type="submit">Check draft &amp; simulate send <span aria-hidden="true">↗</span></button>
+          <p class="submit-note">Only a backend APPROVE can execute the simulated email.</p>
+          <div class="status-line" id="request-status" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="request-status-text"></span></div>
+          <div class="error" id="request-error" role="alert" hidden></div>
+        </form>
+      </section>
+      <section class="panel" aria-labelledby="decision-panel-title" aria-live="polite" aria-busy="false" id="decision-panel">
+        <div class="panel-header"><h2 class="panel-title" id="decision-panel-title">Decision &amp; evidence</h2><span class="pill" id="result-time">AWAITING A DRAFT</span></div>
+        <div class="empty" id="empty-state"><div class="empty-mark" aria-hidden="true">⌕</div><h2>The score is where<br>the check begins.</h2><p>Run a draft to see the evidence behind the decision and whether the customer email was allowed through.</p><div class="question-card"><p class="eyebrow">The question we ask</p><strong>Who would this promise fail?</strong><p>A correct discount can still be wrong for a customer who is not eligible. Find the exception before the email leaves.</p></div><div class="principle"><b aria-hidden="true">✓</b><span>Company policy + customer context + Ezio signals.</span></div></div>
+        <div id="result-content" hidden></div>
+      </section>
+    </div>
+    <section class="boundary" aria-labelledby="boundary-title">
+      <div class="boundary-head"><div><p class="eyebrow">One draft. Two customers.</p><h2 id="boundary-title">Find the eligibility boundary.</h2><p>Challenge the draft above against hypothetical Pro customers at 11 and 12 months. Both decisions come from the same backend gate.</p></div><button class="button request-control" type="button" id="compare">Compare eligibility boundary ↗</button></div>
+      <p class="boundary-note">Hypothetical test contexts only. Your selected customer's plan and tenure stay unchanged. Each APPROVE executes one simulated email.</p>
+      <div id="boundary-output" hidden></div>
+    </section>
+    <section class="session" aria-labelledby="history-title"><div class="section-head"><h2 id="history-title">This session</h2><span class="small-label">Real decisions. Visible action outcomes.</span></div><div id="session-history" class="session-grid"><p class="no-history">Run a good draft, a bad claim, and a review case to compare the gate's decisions.</p></div></section>
+  </main>
+  <footer class="footer"><span>Lumen Cloud · synthetic company policy · works entirely on this laptop</span><span>Policy decides. Evidence explains. The backend executes.</span></footer>
+</div>
+<div class="modal-backdrop" id="audit-modal" hidden>
+  <section class="audit-drawer" role="dialog" aria-modal="true" aria-labelledby="audit-title" tabindex="-1" id="audit-dialog">
+    <div class="drawer-head"><div><h2 id="audit-title">Decision audit trail</h2><p>Persistent backend records · latest 30 decisions</p></div><div class="drawer-controls"><button class="button small request-control" id="refresh-audit">Refresh</button><button class="button small" id="close-audit" aria-label="Close audit trail">✕</button></div></div>
+    <div class="audit-body" id="audit-body"><p class="small-label">Loading audit trail…</p></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<!-- Decisions come from POST /decide; policy and mock actions stay in the backend. -->
+<script src="/app.js"></script>
 </body>
 </html>

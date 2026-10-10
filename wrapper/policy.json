@@ -1,21 +1,21 @@
 {
-  "_help": "Your policy knobs. Every threshold needs a one-sentence 'why' (you'll be asked in the demo). evaluate.py warns while any 'why' still says TODO.",
+  "_help": "Find the Exception: operational review thresholds, not proof of safety.",
 
   "on_ezio_failure": "HOLD_FOR_REVIEW",
-  "on_ezio_failure_why": "TODO: if Ezio can't be reached, do you fail open (APPROVE) or fail closed (HOLD_FOR_REVIEW / BLOCK)? Why?",
+  "on_ezio_failure_why": "Missing upstream evidence cannot authorize sending; known company-policy contradictions still require BLOCK.",
 
   "tier_decisions": { "GREEN": "APPROVE", "YELLOW": "HOLD_FOR_REVIEW", "RED": "BLOCK" },
-  "tier_decisions_why": "TODO: why does each tier map to that decision for your business?",
+  "tier_decisions_why": "GREEN clears only the aggregate check, YELLOW needs human review, and RED withholds sending; independent contradictions and poor dimensions can always raise the decision.",
 
   "dimension_minimums": {
-    "tone":      { "hold_below": 0, "why": "TODO" },
-    "bias":      { "hold_below": 0, "why": "TODO" },
-    "agreement": { "hold_below": 0, "why": "TODO" }
+    "tone":      { "hold_below": 80, "why": "Customer correspondence should be neutral rather than promotional; tone below 80 requires a human rewrite before sending." },
+    "bias":      { "hold_below": 80, "why": "One-sided customer guidance can mislead even with correct prices, so framing below 80 requires review." },
+    "agreement": { "hold_below": 80, "why": "Support should independently check the customer's premise rather than flatter or over-agree; agreement below 80 requires review." }
   },
 
   "when_accuracy_not_scored": "ignore",
-  "when_accuracy_not_scored_why": "TODO: 'not scored' means no claims were checked. Is that a problem for your persona?",
+  "when_accuracy_not_scored_why": "No claims scored is not a contradiction: routine correspondence can pass, while company claims remain subject to independent policy checks.",
 
   "when_accuracy_unavailable": "HOLD_FOR_REVIEW",
-  "when_accuracy_unavailable_why": "TODO: the fact-check service was down. What should happen?"
+  "when_accuracy_unavailable_why": "An unavailable fact-checker leaves public claims unchecked, so hold unless an independent contradiction already requires BLOCK."
 }

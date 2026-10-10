@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import mock_actions
+import audit
 from wrapper import APPROVE, decide
 
 UI_DIR = Path(__file__).parent / "ui"
@@ -49,6 +50,11 @@ class Handler(BaseHTTPRequestHandler):
         route, _, query = self.path.partition("?")
         if route == "/health":
             return self.send_json(200, {"status": "ok"})
+        if route == "/api/audit":
+            try:
+                return self.send_json(200, {"entries": audit.latest()})
+            except OSError:
+                return self.send_json(500, {"error": "Audit log could not be read"})
         if route == "/api/samples":
             persona = dict(p.split("=", 1) for p in query.split("&") if "=" in p).get("persona")
             if persona not in PERSONAS:
@@ -66,7 +72,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "Unknown endpoint"})
 
     def do_POST(self):
-        if self.path != "/decide":
+        if self.path not in ("/decide", "/api/reviews"):
             return self.send_json(404, {"error": "Unknown endpoint"})
         self.connection.settimeout(10)
         try:
@@ -76,6 +82,14 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 raise ValueError("Body must be a JSON object")
+            if self.path == "/api/reviews":
+                try:
+                    event = audit.review(payload.get("decision_id"), payload.get("disposition"), payload.get("note"))
+                except audit.ReviewError as error:
+                    return self.send_json(error.status, {"error": str(error)})
+                except OSError:
+                    return self.send_json(500, {"error": "Review could not be recorded"})
+                return self.send_json(200, {"review": event})
             text, persona, context = payload.get("text"), payload.get("persona"), payload.get("context", {})
             if not isinstance(text, str) or not text.strip() or len(text) > 20000:
                 raise ValueError("text must be a non-empty string of at most 20000 characters")
